@@ -1,115 +1,128 @@
 #include <bits/stdc++.h>
 using namespace std;
-struct nexts//邻接表
+struct nexts // 邻接表
 {
     int pos;
     int w;
 };
-int n, m,d,k;//房间数，走廊数，总传染天数，初始感染者人数
-struct node//最短路径队列维护
+int n, m, d, k; // 房间数，走廊数，总传染天数，初始感染者人数
+struct node     // 最短路径队列维护
 {
     long long dist;
     int pos;
+    int infectday;
     bool operator<(const node &x) const
     {
         return x.dist < dist;
     }
 };
-struct distn
-{
-    long long dist;
-    int pos;
-};
-distn distf[300001];
 vector<nexts> connects[300001];
 priority_queue<node> q;
-long long dist[300001];//最短路径
-bool visit[300001];//最短路径
-int A[300001];//初始感染者位置
-long long D[300001];//第i天传染力距离
+long long dist[300001];   // 最短路径
+bool visited[300001];       // 最短路径
+bool infectcheck[300001]; // 是否感染
+int A[300001];            // 初始感染者位置
+long long D[300001];      // 第i天传染力距离
 int infectdays[300001];
 void initdist()
 {
-    for(int i=1;i<=300001;i++)
+    for (int i = 1; i <= 300001; i++)
     {
-        dist[i]=1e10;
+        dist[i] = 1e10;
     }
 }
-void initvisit()
+void initvisited()
 {
-    memset(visit,false,sizeof(visit));
+    memset(visited, false, sizeof(visited));
 }
 void Dijkstra_queue(int start)
 {
-    dist[start]=0;
-    q.push((node){0,start});
-    while(!q.empty())
+    dist[start] = 0;
+    q.push((node){0, start});
+    while (!q.empty())
     {
-        int location=q.top().pos;
+        int location = q.top().pos;
         q.pop();
-        if(visit[location])continue;
-        visit[location]=true;
-        for(int i=0;i<connects[location].size();i++)
+        if (visited[location])
+            continue;
+        visited[location] = true;
+        for (int i = 0; i < connects[location].size(); i++)
         {
-            int v=connects[location][i].pos;
-            int w=connects[location][i].w;
-            if(dist[v]>dist[location]+w)
+            int v = connects[location][i].pos;
+            int w = connects[location][i].w;
+            if (dist[v] > dist[location] + w)
             {
-                dist[v]=dist[location]+w;
-                if(!visit[v])q.push((node){dist[v],v});
+                dist[v] = dist[location] + w;
+                if (!visited[v])
+                    q.push((node){dist[v], v});
             }
         }
     }
     return;
 }
-bool com(distn a,distn b)
-{
-    return a.dist<b.dist;
-}
-void Final_Dijkstra(int k)
+void Final_queue(int k)
 {
     initdist();
-    for(int i=1;i<=k;i++)
+    cin >> d;
+    for (int i = 1; i <= d; i++)
+        cin >> D[i];
+    queue<node> q;
+    for (int i = 1; i <= k; i++)
+        q.push((node){0, A[i], 0});
+    int start = 0;
+    int infectday = 0;
+    while (!q.empty()) // 存在一种可能，当某一天可感染成员队列为空（第i天无法感染任何人）
     {
-        initvisit();
-        Dijkstra_queue(A[i]);
+        start = q.front().pos;
+        infectday = q.front().infectday;
+        q.pop();
+        infectcheck[start] = true;
+        infectdays[start] = infectday;
+        if (infectday >= d)
+            continue;
+        initvisited();
+        Dijkstra_queue(start);
+        for (int i = 1; i <= n; i++)
+        {
+            if (!infectcheck[i] && D[infectday + 1] >= dist[i])
+            {
+                q.push({dist[i], i, infectday + 1});
+                infectcheck[i] = true;
+                infectdays[i] = infectday + 1;
+            }
+        }
+        if (q.empty() && infectday < d - 1) 
+        // 感染队列为空的原因有两种，一是第i天无法感染任何人，需要下一步if；二是天数已满，统计结束，直接跳出.
+        // 而当第d-1天的感染者无法感染任何人时，直接跳出；否则要进行手动跨天。
+        {
+            for (int i = 1; i <= n; i++) // 如果不是第d-1天
+            {
+                if (!infectcheck[i] && D[infectday + 2] >= dist[i])
+                {
+                    q.push({dist[i], i, infectday + 2});
+                    infectcheck[i] = true;
+                    infectdays[i] = infectday + 2;
+                }
+            }
+        }
     }
 }
 int main()
 {
-    cin>>n>>m;
-    for(int i=1,u,v,w;i<=m;i++)
+    cin >> n >> m;
+    for (int i = 1, u, v, w; i <= m; i++)
     {
-        cin>>u>>v>>w;
-        connects[u].push_back((nexts){v,w});
-        connects[v].push_back((nexts){u,w});//邻接表双向图
+        cin >> u >> v >> w;
+        connects[u].push_back((nexts){v, w});
+        connects[v].push_back((nexts){u, w}); // 邻接表双向图
     }
-    cin>>k;
-    memset(infectdays,-1,sizeof(infectdays));
-    for(int i=1;i<=k;i++)cin>>A[i], infectdays[A[i]]++;
-    Final_Dijkstra(k);
-    for(int i=1;i<=n;i++)
-    {
-        distf[i]=(distn){dist[i],i};
-    }
-    sort(distf+1,distf+n+1,com);//标定感染距离从小到大，减少复杂度S
-    cin>>d;
-    int num=k+1;
-    for(int i=1;i<=d;i++)
-    {
-        cin>>D[i];
-        D[i]+=D[i-1];//前缀和，保证传染距离全部是从初始感染点算起，这样可以保证只需要一次Final_Dijkstra
-        while(distf[num].dist<=D[i]&&num<=n)
-        {
-            infectdays[distf[num].pos]=i;
-            num++;
-        }
-
-    }
-    for(int i=1;i<=n;i++)
-    {
-        cout<<infectdays[i]<<endl;
-    }
+    cin >> k;
+    memset(infectdays, -1, sizeof(infectdays));
+    for (int i = 1; i <= k; i++)
+        cin >> A[i], infectdays[A[i]]++;
+    Final_queue(k);
+    for (int i = 1; i <= n; i++)
+        cout << infectdays[i] << endl;
     system("pause");
     return 0;
 }
