@@ -109,7 +109,13 @@ signed main()
 
     对照dp发现到了dp[n][]就不用扔骰子了，for循环不需要等于n
 
+    这个才是要命的最核心的错误（天那我咋胡思乱想了这么多）
 
+    问题出在了dp数组不能在n节点的时候再扔骰子，否则无论怎么扔都是必定能到终点节点。
+
+    我就说前面都乘着invq呢为啥还是不针对完全概率事件。
+
+    又浪费了老多时间
     */
     int ans = 0;
     /*for (int j = 0; j <= n - a; j++)
@@ -121,12 +127,14 @@ signed main()
         }
 
     }*/
-    
-    for (int j = 0; j <= n-a; j++) {
-		for (int i = b; i <= n; i++) {
-			ans = (ans + dp1[n][j] * dp2[i][j] % mod) % mod;
-		}
-	}
+
+    for (int j = 0; j <= n - a; j++)
+    {
+        for (int i = b; i <= n; i++)
+        {
+            ans = (ans + dp1[n][j] * dp2[i][j] % mod) % mod;
+        }
+    }
     cout << ans << endl;
     system("pause");
     return 0;
